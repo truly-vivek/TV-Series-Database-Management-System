@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Series DB Manager</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        .animate-fade-in-down {
+            animation: fadeInDown 0.5s ease-out;
+        }
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans min-h-screen flex flex-col">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-blue-600 text-white p-2 rounded-lg">
+                        <i data-lucide="database" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                            TV Series DB Manager
+                        </h1>
+                        <p class="text-xs text-slate-500">CS6401 Project Dashboard</p>
+                    </div>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex space-x-4">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center bg-slate-100 text-blue-600">
+                        <i data-lucide="activity" class="w-4 h-4 mr-2"></i> Dashboard
+                    </button>
+                    <button onclick="switchTab('views')" id="nav-views" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center text-slate-600 hover:bg-slate-50">
+                        <i data-lucide="file-text" class="w-4 h-4 mr-2"></i> SQL Views
+                    </button>
+                    <button onclick="switchTab('operations')" id="nav-operations" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center text-slate-600 hover:bg-slate-50">
+                        <i data-lucide="clock" class="w-4 h-4 mr-2"></i> Trigger & Ops
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <div class="md:hidden flex border-b border-slate-200 bg-white overflow-x-auto">
+        <button onclick="switchTab('dashboard')" id="mob-nav-dashboard" class="mob-nav-btn flex-1 py-3 text-sm font-medium text-center whitespace-nowrap border-b-2 border-blue-500 text-blue-600">Dashboard</button>
+        <button onclick="switchTab('views')" id="mob-nav-views" class="mob-nav-btn flex-1 py-3 text-sm font-medium text-center whitespace-nowrap text-slate-500">Views</button>
+        <button onclick="switchTab('operations')" id="mob-nav-operations" class="mob-nav-btn flex-1 py-3 text-sm font-medium text-center whitespace-nowrap text-slate-500">Ops</button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
+        
+        <!-- DASHBOARD TAB -->
+        <div id="tab-dashboard" class="tab-content space-y-6">
+            <!-- Counters -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="p-3 bg-blue-100 rounded-full">
+                        <i data-lucide="tv" class="w-6 h-6 text-blue-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-slate-500">Total Series</p>
+                        <p class="text-2xl font-bold text-slate-800" id="count-series">0</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="p-3 bg-emerald-100 rounded-full">
+                        <i data-lucide="play" class="w-6 h-6 text-emerald-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-slate-500">Total Episodes</p>
+                        <p class="text-2xl font-bold text-slate-800" id="count-episodes">0</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="p-3 bg-purple-100 rounded-full">
+                        <i data-lucide="users" class="w-6 h-6 text-purple-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-slate-500">Total Actors</p>
+                        <p class="text-2xl font-bold text-slate-800" id="count-actors">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Rating Chart -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold mb-4 text-slate-800 flex items-center">
+                        <i data-lucide="trending-up" class="w-5 h-5 mr-2"></i> Current Series Ratings
+                    </h3>
+                    <div class="h-64 relative">
+                        <canvas id="chart-ratings"></canvas>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2 text-center">Data reflects real-time updates from Trigger simulation.</p>
+                </div>
+
+                <!-- Actor Chart -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold mb-4 text-slate-800 flex items-center">
+                        <i data-lucide="activity" class="w-5 h-5 mr-2"></i> Actor Engagement
+                    </h3>
+                    <div class="h-64 relative">
+                        <canvas id="chart-actors"></canvas>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2 text-center">Top 5 Actors by Total Minutes Watched (View 2).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEWS TAB -->
+        <div id="tab-views" class="tab-content hidden space-y-8">
+            <!-- View 1 -->
+            <section>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-slate-800 flex items-center">
+                        <i data-lucide="database" class="w-5 h-5 mr-2 text-blue-500"></i>
+                        View: top_series_cast
+                    </h3>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Rating ≥ 4.00</span>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-6 py-3 font-medium text-slate-500">Series ID</th>
+                                    <th class="px-6 py-3 font-medium text-slate-500">Title</th>
+                                    <th class="px-6 py-3 font-medium text-slate-500">Rating</th>
+                                    <th class="px-6 py-3 font-medium text-slate-500">Cast (Group Concat)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="view1-body" class="divide-y divide-slate-200">
+                                <!-- Dynamic Content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- View 2 -->
+            <section>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-slate-800 flex items-center">
+                        <i data-lucide="database" class="w-5 h-5 mr-2 text-purple-500"></i>
+                        View: actor_minutes
+                    </h3>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">Aggregated by User History</span>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-6 py-3 font-medium text-slate-500">Actor ID</th>
+                                    <th class="px-6 py-3 font-medium text-slate-500">Actor Name</th>
+                                    <th class="px-6 py-3 font-medium text-slate-500">Total Minutes Played</th>
+                                </tr>
+                            </thead>
+                            <tbody id="view2-body" class="divide-y divide-slate-200">
+                                <!-- Dynamic Content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- OPERATIONS TAB -->
+        <div id="tab-operations" class="tab-content hidden grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Trigger Section -->
+            <div class="space-y-4">
+                <div class="flex items-center space-x-2">
+                    <h3 class="text-xl font-bold text-slate-800">Trigger: AdjustRating</h3>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Simulated</span>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-amber-500">
+                    <p class="text-sm text-slate-600 mb-4">
+                        Simulates inserting into <code>user_history</code>. 
+                        <br/>1. Clamps minutes if > episode length.
+                        <br/>2. Updates Series Rating (+0.0001 * mins), max 5.00.
+                    </p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">User</label>
+                            <select id="trigger-user" class="w-full p-2 rounded border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+                                <!-- Dynamic Options -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Episode</label>
+                            <select id="trigger-episode" class="w-full p-2 rounded border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+                                <!-- Dynamic Options -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Minutes Played</label>
+                            <input type="number" id="trigger-minutes" value="50" class="w-full p-2 rounded border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+                        </div>
+                        <button onclick="runTrigger()" class="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded font-medium text-sm transition-colors flex items-center justify-center">
+                            <i data-lucide="activity" class="w-4 h-4 mr-2"></i> Run Trigger Logic
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Function Section -->
+                <div class="flex items-center space-x-2 mt-8">
+                    <h3 class="text-xl font-bold text-slate-800">Function: GetEpisodeList</h3>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-purple-500">
+                    <div class="flex space-x-2 items-end">
+                        <div class="flex-1">
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Series ID</label>
+                            <input type="number" id="func-series-id" value="3" class="w-full p-2 rounded border border-slate-300 bg-white text-sm">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Season #</label>
+                            <input type="number" id="func-season-num" value="1" class="w-full p-2 rounded border border-slate-300 bg-white text-sm">
+                        </div>
+                        <button onclick="runFunction()" class="py-2 px-4 bg-purple-500 hover:bg-purple-600 text-white rounded font-medium text-sm transition-colors">
+                            Get List
+                        </button>
+                    </div>
+                    <div id="func-result-container" class="hidden mt-4 p-3 bg-slate-100 rounded text-sm font-mono text-slate-700">
+                        Result: "<span id="func-result"></span>"
+                    </div>
+                </div>
+            </div>
+
+            <!-- Procedure Section -->
+            <div class="space-y-4">
+                <div class="flex items-center space-x-2">
+                    <h3 class="text-xl font-bold text-slate-800">Procedure: AddEpisode</h3>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Simulated</span>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500">
+                    <p class="text-sm text-slate-600 mb-4">
+                        Simulates <code>CALL AddEpisode(...)</code>. 
+                        <br/>Checks if Series exists and if Episode (S#, E#) is unique.
+                    </p>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Series ID</label>
+                                <input type="number" id="proc-series-id" value="3" class="w-full p-2 rounded border border-slate-300 bg-white text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Season #</label>
+                                <input type="number" id="proc-season-num" value="1" class="w-full p-2 rounded border border-slate-300 bg-white text-sm">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Episode #</label>
+                                <input type="number" id="proc-episode-num" value="3" class="w-full p-2 rounded border border-slate-300 bg-white text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Length (min)</label>
+                                <input type="number" id="proc-length" value="41.5" class="w-full p-2 rounded border border-slate-300 bg-white text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Title</label>
+                            <input type="text" id="proc-title" value="Chapter 3: The Test" class="w-full p-2 rounded border border-slate-300 bg-white text-sm">
+                        </div>
+                        <button onclick="runProcedure()" class="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded font-medium text-sm transition-colors flex items-center justify-center">
+                            <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Call Procedure
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-200 mt-auto py-8 text-center text-slate-500 text-sm bg-slate-50">
+        <p>CS6401 Database Systems Project • University of Limerick</p>
+        <p class="mt-1 text-xs">Simulated SQL Environment (No backend database connection)</p>
+    </footer>
+
+    <!-- LOGIC SCRIPT -->
+    <script>
+        // --- INITIAL DATA ---
+        let series = [
+            { series_id: 1, series_title: 'Breaking Bad', rating: 4.0 },
+            { series_id: 2, series_title: 'Stranger Things', rating: 4.5 },
+            { series_id: 3, series_title: 'The Mandalorian', rating: 3.99 },
+        ];
+
+        let episodes = [
+            { episode_id: 1, series_id: 1, season_number: 1, episode_number: 1, episode_title: 'Pilot', episode_length: 58.5 },
+            { episode_id: 2, series_id: 1, season_number: 1, episode_number: 2, episode_title: "Cat's in the Bag...", episode_length: 49.2 },
+            { episode_id: 3, series_id: 1, season_number: 2, episode_number: 1, episode_title: 'Seven Thirty-Seven', episode_length: 47.8 },
+            { episode_id: 4, series_id: 2, season_number: 1, episode_number: 1, episode_title: 'Chapter One: The Vanishing of Will Byers', episode_length: 50.0 },
+            { episode_id: 5, series_id: 2, season_number: 1, episode_number: 2, episode_title: 'Chapter Two: The Weirdo on Maple Street', episode_length: 48.5 },
+            { episode_id: 6, series_id: 3, season_number: 1, episode_number: 1, episode_title: 'Chapter 1: The Mandalorian', episode_length: 40.2 },
+            { episode_id: 7, series_id: 3, season_number: 1, episode_number: 2, episode_title: 'Chapter 2: The Child', episode_length: 33.8 },
+        ];
+
+        const actors = [
+            { actor_id: 1, actor_name: 'Bryan Cranston' },
+            { actor_id: 2, actor_name: 'Aaron Paul' },
+            { actor_id: 3, actor_name: 'Anna Gunn' },
+            { actor_id: 4, actor_name: 'Millie Bobby Brown' },
+            { actor_id: 5, actor_name: 'Finn Wolfhard' },
+            { actor_id: 6, actor_name: 'Pedro Pascal' },
+            { actor_id: 7, actor_name: 'Gina Carano' },
+            { actor_id: 8, actor_name: 'Carl Weathers' },
+        ];
+
+        const actorEpisode = [
+            { actor_id: 1, episode_id: 1 }, { actor_id: 1, episode_id: 2 },
+            { actor_id: 2, episode_id: 1 }, { actor_id: 2, episode_id: 2 },
+            { actor_id: 3, episode_id: 3 },
+            { actor_id: 4, episode_id: 4 }, { actor_id: 4, episode_id: 5 },
+            { actor_id: 5, episode_id: 4 }, { actor_id: 5, episode_id: 5 },
+            { actor_id: 6, episode_id: 6 }, { actor_id: 6, episode_id: 7 },
+            { actor_id: 7, episode_id: 6 }, { actor_id: 7, episode_id: 7 },
+            { actor_id: 8, episode_id: 6 }, { actor_id: 8, episode_id: 7 },
+        ];
+
+        const users = [
+            { user_id: 1, user_name: 'User1' },
+            { user_id: 2, user_name: 'User2' },
+            { user_id: 3, user_name: 'User3' },
+        ];
+
+        let userHistory = [
+            { user_id: 1, episode_id: 1, minutes_played: 30.0 },
+            { user_id: 1, episode_id: 2, minutes_played: 45.0 },
+            { user_id: 2, episode_id: 4, minutes_played: 20.0 },
+            { user_id: 2, episode_id: 5, minutes_played: 35.0 },
+            { user_id: 3, episode_id: 6, minutes_played: 15.0 },
+            { user_id: 3, episode_id: 7, minutes_played: 28.0 },
+            { user_id: 1, episode_id: 3, minutes_played: 22.0 },
+            { user_id: 2, episode_id: 3, minutes_played: 15.0 },
+            { user_id: 3, episode_id: 1, minutes_played: 30.0 },
+            { user_id: 3, episode_id: 3, minutes_played: 25.0 },
+        ];
+
+        // --- GLOBAL CHART INSTANCES ---
+        let ratingChart = null;
+        let actorChart = null;
+
+        // --- LOGIC FUNCTIONS ---
+
+        function getTopSeriesCastView() {
+            return series
+                .filter(s => s.rating >= 4.00)
+                .map(s => {
+                    const sEpIds = episodes.filter(e => e.series_id === s.series_id).map(e => e.episode_id);
+                    const sActIds = actorEpisode.filter(ae => sEpIds.includes(ae.episode_id)).map(ae => ae.actor_id);
+                    const uniqueIds = [...new Set(sActIds)];
+                    const castNames = actors
+                        .filter(a => uniqueIds.includes(a.actor_id))
+                        .map(a => a.actor_name)
+                        .sort()
+                        .join(', ');
+                    
+                    return { ...s, cast: castNames };
+                });
+        }
+
+        function getActorMinutesView() {
+            return actors.map(a => {
+                const epIds = actorEpisode.filter(ae => ae.actor_id === a.actor_id).map(ae => ae.episode_id);
+                const totalMins = userHistory
+                    .filter(uh => epIds.includes(uh.episode_id))
+                    .reduce((sum, uh) => sum + uh.minutes_played, 0);
+                return { ...a, total_minutes_played: totalMins };
+            }).sort((a, b) => b.total_minutes_played - a.total_minutes_played);
+        }
+
+        // --- UI FUNCTIONS ---
+
+        function init() {
+            lucide.createIcons();
+            populateForms();
+            renderDashboard();
+        }
+
+        function switchTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('bg-slate-100', 'text-blue-600');
+                el.classList.add('text-slate-600');
+            });
+            document.querySelectorAll('.mob-nav-btn').forEach(el => {
+                el.classList.remove('border-b-2', 'border-blue-500', 'text-blue-600');
+                el.classList.add('text-slate-500');
+            });
+
+            // Show active tab
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            
+            // Style active nav
+            const desktopNav = document.getElementById(`nav-${tabId}`);
+            if(desktopNav) {
+                desktopNav.classList.add('bg-slate-100', 'text-blue-600');
+                desktopNav.classList.remove('text-slate-600');
+            }
+            const mobNav = document.getElementById(`mob-nav-${tabId}`);
+            if(mobNav) {
+                mobNav.classList.add('border-b-2', 'border-blue-500', 'text-blue-600');
+                mobNav.classList.remove('text-slate-500');
+            }
+
+            // Render content based on tab
+            if (tabId === 'dashboard') renderDashboard();
+            if (tabId === 'views') renderViews();
+            if (tabId === 'operations') populateForms();
+        }
+
+        function renderDashboard() {
+            document.getElementById('count-series').innerText = series.length;
+            document.getElementById('count-episodes').innerText = episodes.length;
+            document.getElementById('count-actors').innerText = actors.length;
+
+            renderCharts();
+        }
+
+        function renderCharts() {
+            // Ratings Chart
+            const ctx1 = document.getElementById('chart-ratings').getContext('2d');
+            const ratingData = series.map(s => s.rating);
+            const ratingLabels = series.map(s => s.series_title);
+            const ratingColors = series.map(s => s.rating >= 4 ? '#10b981' : '#6366f1');
+
+            if (ratingChart) ratingChart.destroy();
+
+            ratingChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ratingLabels,
+                    datasets: [{
+                        label: 'Rating',
+                        data: ratingData,
+                        backgroundColor: ratingColors,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { max: 5.0, beginAtZero: true }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Actor Chart
+            const ctx2 = document.getElementById('chart-actors').getContext('2d');
+            const actorView = getActorMinutesView().slice(0, 5);
+            
+            if (actorChart) actorChart.destroy();
+
+            actorChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: actorView.map(a => a.actor_name),
+                    datasets: [{
+                        label: 'Minutes Watched',
+                        data: actorView.map(a => a.total_minutes_played),
+                        backgroundColor: '#8b5cf6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function renderViews() {
+            // View 1
+            const view1Data = getTopSeriesCastView();
+            const tbody1 = document.getElementById('view1-body');
+            tbody1.innerHTML = view1Data.map(r => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-3 text-slate-700 border-b border-slate-100">${r.series_id}</td>
+                    <td class="px-6 py-3 font-medium text-slate-900 border-b border-slate-100">${r.series_title}</td>
+                    <td class="px-6 py-3 text-emerald-600 font-bold border-b border-slate-100">${r.rating.toFixed(4)}</td>
+                    <td class="px-6 py-3 text-slate-600 border-b border-slate-100">${r.cast}</td>
+                </tr>
+            `).join('');
+
+            // View 2
+            const view2Data = getActorMinutesView();
+            const tbody2 = document.getElementById('view2-body');
+            tbody2.innerHTML = view2Data.map(r => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-3 text-slate-700 border-b border-slate-100">${r.actor_id}</td>
+                    <td class="px-6 py-3 font-medium text-slate-900 border-b border-slate-100">${r.actor_name}</td>
+                    <td class="px-6 py-3 text-slate-600 border-b border-slate-100">${r.total_minutes_played.toFixed(1)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function populateForms() {
+            // Users Dropdown
+            const userSelect = document.getElementById('trigger-user');
+            // Only populate if empty to preserve selection
+            if (userSelect.children.length === 0) {
+                userSelect.innerHTML = users.map(u => `<option value="${u.user_id}">${u.user_name}</option>`).join('');
+            }
+
+            // Episodes Dropdown
+            const epSelect = document.getElementById('trigger-episode');
+             // Only populate if empty to preserve selection
+            if (epSelect.children.length === 0) {
+                epSelect.innerHTML = episodes.map(e => {
+                    const prefix = e.series_id === 1 ? 'BB' : e.series_id === 2 ? 'ST' : 'Mando';
+                    return `<option value="${e.episode_id}">${prefix} - S${e.season_number}E${e.episode_number}: ${e.episode_title} (${e.episode_length}m)</option>`;
+                }).join('');
+                epSelect.value = "5"; // Default
+            }
+        }
+
+        // --- OPERATIONS ---
+
+        function runTrigger() {
+            const userId = parseInt(document.getElementById('trigger-user').value);
+            const epId = parseInt(document.getElementById('trigger-episode').value);
+            const minutesInput = parseFloat(document.getElementById('trigger-minutes').value);
+
+            const episode = episodes.find(e => e.episode_id === epId);
+            
+            if (!episode) return showToast('Error: Episode not found', 'error');
+
+            // 1. Clamp logic
+            let minutesPlayed = minutesInput;
+            let clamped = false;
+            if (minutesPlayed > episode.episode_length) {
+                minutesPlayed = episode.episode_length;
+                clamped = true;
+            }
+
+            // 2. PK Check
+            const exists = userHistory.some(h => h.user_id === userId && h.episode_id === epId);
+            if (exists) return showToast('PK Violation: User already watched this episode', 'error');
+
+            // 3. Insert
+            userHistory.push({ user_id: userId, episode_id: epId, minutes_played: minutesPlayed });
+
+            // 4. Update Rating
+            const ser = series.find(s => s.series_id === episode.series_id);
+            if (ser.rating < 5.00) {
+                const increment = 0.0001 * minutesPlayed;
+                ser.rating = Math.min(5.00, ser.rating + increment);
+            }
+
+            const msg = clamped ? `Success (Clamped to ${minutesPlayed}m). Rating updated!` : 'Success. Rating updated!';
+            showToast(msg, 'success');
+        }
+
+        function runProcedure() {
+            const sId = parseInt(document.getElementById('proc-series-id').value);
+            const sNum = parseInt(document.getElementById('proc-season-num').value);
+            const eNum = parseInt(document.getElementById('proc-episode-num').value);
+            const eLen = parseFloat(document.getElementById('proc-length').value);
+            const title = document.getElementById('proc-title').value;
+
+            // Check Series
+            if (!series.some(s => s.series_id === sId)) return showToast('Error: Series ID not found', 'error');
+
+            // Check Duplicate
+            const duplicate = episodes.some(e => e.series_id === sId && e.season_number === sNum && e.episode_number === eNum);
+            if (duplicate) return showToast(`Error: Episode S${sNum}E${eNum} already exists`, 'error');
+
+            // Insert
+            episodes.push({
+                episode_id: episodes.length + 100,
+                series_id: sId,
+                season_number: sNum,
+                episode_number: eNum,
+                episode_title: title,
+                episode_length: eLen
+            });
+
+            // Update dropdowns
+            const epSelect = document.getElementById('trigger-episode');
+            epSelect.innerHTML = ""; 
+            populateForms();
+
+            showToast('Episode added successfully!', 'success');
+        }
+
+        function runFunction() {
+            const sId = parseInt(document.getElementById('func-series-id').value);
+            const sNum = parseInt(document.getElementById('func-season-num').value);
+
+            const list = episodes
+                .filter(e => e.series_id === sId && e.season_number === sNum)
+                .sort((a, b) => a.episode_number - b.episode_number)
+                .map(e => e.episode_title)
+                .join(', ');
+
+            document.getElementById('func-result').innerText = list || "No episodes found";
+            document.getElementById('func-result-container').classList.remove('hidden');
+        }
+
+        function showToast(message, type) {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            const colorClass = type === 'error' ? 'bg-rose-500' : 'bg-emerald-500';
+            const icon = type === 'error' ? 'alert-circle' : 'check-circle-2';
+            
+            el.className = `${colorClass} text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-3 animate-fade-in-down pointer-events-auto`;
+            el.innerHTML = `
+                <i data-lucide="${icon}" class="w-5 h-5"></i>
+                <span class="font-medium">${message}</span>
+            `;
+
+            container.appendChild(el);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 0.5s';
+                setTimeout(() => el.remove(), 500);
+            }, 3000);
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>
