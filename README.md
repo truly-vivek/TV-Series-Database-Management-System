@@ -8,12 +8,6 @@
 
 This project implements a structured SQL-based solution for managing a TV series database. The system is designed to handle series data, episodes, actors, and user watch history. The completed work includes the development of SQL views, a trigger for automatic series rating updates, a stored procedure for controlled episode insertion, and a stored function for retrieving ordered episode title lists.
 
-## 👥 Contributors
-
-* **Vivek**
-* **Francisco**
-
-*All members of the group contributed equally to the design, execution, and review of the work.*
 
 ## 🛠️ Technical Stack
 
